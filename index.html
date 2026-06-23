@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Case Resolution Dashboard — DS / DMG / PF</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f8f8f6;
+    --surface: #ffffff;
+    --surface2: #f2f2ef;
+    --border: #e4e4e0;
+    --border-strong: #c8c8c2;
+    --text: #1a1a18;
+    --text-muted: #6b6b65;
+    --text-faint: #a0a09a;
+    --accent: #185FA5;
+    --accent-light: #E6F1FB;
+    --radius: 8px;
+    --radius-lg: 12px;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 20px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .header-left h1 {
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+    color: var(--text);
+  }
+
+  .header-left p {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+
+  .badge {
+    font-size: 11px;
+    background: var(--accent-light);
+    color: var(--accent);
+    border: 1px solid #B5D4F4;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-weight: 500;
+  }
+
+  main {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 28px 24px 48px;
+  }
+
+  /* Controls */
+  .controls {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 16px 20px;
+    margin-bottom: 20px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    align-items: flex-start;
+  }
+
+  .ctrl-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex: 1;
+    min-width: 180px;
+  }
+
+  .ctrl-label {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .8px;
+    color: var(--text-muted);
+  }
+
+  .pill-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .pill {
+    font-size: 12px;
+    padding: 5px 12px;
+    border-radius: 20px;
+    cursor: pointer;
+    border: 1px solid var(--border-strong);
+    background: var(--surface);
+    color: var(--text-muted);
+    font-family: inherit;
+    transition: all .15s;
+    font-weight: 500;
+  }
+
+  .pill:hover { border-color: var(--accent); color: var(--accent); }
+  .pill.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  .mode-btn {
+    font-size: 12px;
+    padding: 5px 14px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    border: 1px solid var(--border-strong);
+    background: var(--surface);
+    color: var(--text-muted);
+    font-family: inherit;
+    font-weight: 500;
+    transition: all .15s;
+  }
+  .mode-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .mode-btn.active { background: var(--text); color: #fff; border-color: var(--text); }
+
+  /* Metrics */
+  .metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .mc {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+  }
+
+  .mc-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+    font-weight: 500;
+  }
+
+  .mc-val {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.5px;
+    line-height: 1;
+  }
+
+  .mc-val.small { font-size: 15px; font-weight: 600; }
+
+  /* Table */
+  .table-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    margin-bottom: 20px;
+  }
+
+  .table-title {
+    padding: 14px 20px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .7px;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border);
+    background: var(--surface2);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .table-scroll { overflow-x: auto; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+
+  th {
+    padding: 10px 14px;
+    text-align: right;
+    font-weight: 600;
+    font-size: 11px;
+    color: var(--text-muted);
+    border-bottom: 1.5px solid var(--border-strong);
+    background: var(--surface2);
+    position: sticky;
+    top: 0;
+  }
+
+  th:first-child { text-align: left; }
+
+  td {
+    padding: 9px 14px;
+    border-bottom: 1px solid var(--border);
+    text-align: right;
+    color: var(--text);
+  }
+
+  td:first-child { text-align: left; font-weight: 500; color: var(--text-muted); }
+
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover td { background: var(--surface2); }
+
+  .total-row td {
+    font-weight: 700;
+    border-top: 2px solid var(--border-strong);
+    background: var(--surface2) !important;
+    color: var(--text);
+  }
+
+  .total-row td:first-child { color: var(--text); }
+  .zero { color: var(--text-faint); }
+
+  .team-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    margin-right: 5px;
+    vertical-align: middle;
+  }
+
+  /* Chart */
+  .chart-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+  }
+
+  .chart-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .chart-title {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .7px;
+    color: var(--text-muted);
+  }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .legend-swatch {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+
+  .chart-canvas-wrap {
+    position: relative;
+    width: 100%;
+    height: 300px;
+  }
+
+  footer {
+    text-align: center;
+    padding: 24px;
+    font-size: 11px;
+    color: var(--text-faint);
+    border-top: 1px solid var(--border);
+    margin-top: 32px;
+  }
+
+  @media (max-width: 600px) {
+    header { padding: 16px 20px; }
+    main { padding: 20px 16px 40px; }
+    .mc-val { font-size: 18px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <h1>Case Resolution Dashboard</h1>
+    <p>DS · DMG · PF Teams &nbsp;·&nbsp; Jan – May 2026</p>
+  </div>
+  <span class="badge">25,264 cases</span>
+</header>
+
+<main>
+
+  <div class="controls">
+    <div class="ctrl-group" style="flex:0 0 auto">
+      <span class="ctrl-label">Filter by</span>
+      <div class="pill-row">
+        <button class="mode-btn active" id="mode-sl" onclick="setMode('service_line')">Service line</button>
+        <button class="mode-btn" id="mode-ov" onclick="setMode('overview')">Case overview</button>
+      </div>
+    </div>
+    <div class="ctrl-group">
+      <span class="ctrl-label" id="filter-label">Service line</span>
+      <div class="pill-row" id="filter-pills"></div>
+    </div>
+  </div>
+
+  <div class="metrics" id="metrics"></div>
+
+  <div class="table-wrap">
+    <div class="table-title">
+      <span>Case count by month &amp; resolver team</span>
+      <span id="filter-badge" style="font-size:11px;background:#f2f2ef;padding:2px 10px;border-radius:20px;color:#6b6b65;border:1px solid #e4e4e0">All</span>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead id="thead"></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="chart-wrap">
+    <div class="chart-header">
+      <span class="chart-title">Monthly volume by resolver team</span>
+      <div class="legend" id="chart-legend"></div>
+    </div>
+    <div class="chart-canvas-wrap">
+      <canvas id="barChart" role="img" aria-label="Stacked bar chart of monthly case counts by resolver team"></canvas>
+    </div>
+  </div>
+
+</main>
+
+<footer>FE fundinfo · Customer Support Operations · Data generated from Salesforce case export</footer>
+
+<script>
+const RAW=[{"month":"2026-01","team":"DMG","service_line":"Data Exchange","overview":"Data Enquiry","count":5},{"month":"2026-01","team":"DMG","service_line":"Data Exchange","overview":"Data Issue","count":37},{"month":"2026-01","team":"DMG","service_line":"Data Exchange","overview":"Data Request","count":522},{"month":"2026-01","team":"DMG","service_line":"Data Insights","overview":"Data Enquiry","count":2},{"month":"2026-01","team":"DMG","service_line":"Data Insights","overview":"Data Issue","count":26},{"month":"2026-01","team":"DMG","service_line":"Data Insights","overview":"Data Request","count":46},{"month":"2026-01","team":"DMG","service_line":"Data Management","overview":"Data Enquiry","count":160},{"month":"2026-01","team":"DMG","service_line":"Data Management","overview":"Data Issue","count":109},{"month":"2026-01","team":"DMG","service_line":"Data Management","overview":"Data Request","count":1648},{"month":"2026-01","team":"Data Onboarding","service_line":"Data Exchange","overview":"Data Enquiry","count":1},{"month":"2026-01","team":"Data Onboarding","service_line":"Data Exchange","overview":"Data Request","count":101},{"month":"2026-01","team":"Data Onboarding","service_line":"Data Insights","overview":"Data Request","count":3},{"month":"2026-01","team":"Data Onboarding","service_line":"Data Management","overview":"Data Request","count":7},{"month":"2026-01","team":"Data Support","service_line":"Data Exchange","overview":"Data Enquiry","count":240},{"month":"2026-01","team":"Data Support","service_line":"Data Exchange","overview":"Data Issue","count":12},{"month":"2026-01","team":"Data Support","service_line":"Data Exchange","overview":"Data Request","count":664},{"month":"2026-01","team":"Data Support","service_line":"Data Insights","overview":"Data Enquiry","count":1},{"month":"2026-01","team":"Data Support","service_line":"Data Insights","overview":"Data Issue","count":8},{"month":"2026-01","team":"Data Support","service_line":"Data Insights","overview":"Data Request","count":27},{"month":"2026-01","team":"Data Support","service_line":"Data Management","overview":"Data Enquiry","count":8},{"month":"2026-01","team":"Data Support","service_line":"Data Management","overview":"Data Issue","count":23},{"month":"2026-01","team":"Data Support","service_line":"Data Management","overview":"Data Request","count":147},{"month":"2026-01","team":"Other","service_line":"Data Exchange","overview":"Data Enquiry","count":38},{"month":"2026-01","team":"Other","service_line":"Data Exchange","overview":"Data Issue","count":52},{"month":"2026-01","team":"Other","service_line":"Data Exchange","overview":"Data Request","count":340},{"month":"2026-01","team":"Other","service_line":"Data Insights","overview":"Data Enquiry","count":6},{"month":"2026-01","team":"Other","service_line":"Data Insights","overview":"Data Issue","count":12},{"month":"2026-01","team":"Other","service_line":"Data Insights","overview":"Data Request","count":14},{"month":"2026-01","team":"Other","service_line":"Data Management","overview":"Data Enquiry","count":8},{"month":"2026-01","team":"Other","service_line":"Data Management","overview":"Data Issue","count":18},{"month":"2026-01","team":"Other","service_line":"Data Management","overview":"Data Request","count":138},{"month":"2026-01","team":"PF Data","service_line":"Data Exchange","overview":"Data Request","count":6},{"month":"2026-01","team":"PF Data","service_line":"Data Insights","overview":"Data Request","count":1},{"month":"2026-01","team":"PF Data","service_line":"Data Management","overview":"Data Enquiry","count":34},{"month":"2026-01","team":"PF Data","service_line":"Data Management","overview":"Data Issue","count":7},{"month":"2026-01","team":"PF Data","service_line":"Data Management","overview":"Data Request","count":436},{"month":"2026-01","team":"PF Support","service_line":"Data Management","overview":"Data Enquiry","count":489},{"month":"2026-01","team":"PF Support","service_line":"Data Management","overview":"Data Issue","count":5},{"month":"2026-01","team":"PF Support","service_line":"Data Management","overview":"Data Request","count":17},{"month":"2026-01","team":"Product Support","service_line":"Data Exchange","overview":"Data Enquiry","count":35},{"month":"2026-01","team":"Product Support","service_line":"Data Exchange","overview":"Data Request","count":59},{"month":"2026-01","team":"Product Support","service_line":"Data Insights","overview":"Data Enquiry","count":7},{"month":"2026-01","team":"Product Support","service_line":"Data Insights","overview":"Data Issue","count":9},{"month":"2026-01","team":"Product Support","service_line":"Data Insights","overview":"Data Request","count":20},{"month":"2026-01","team":"Product Support","service_line":"Data Management","overview":"Data Enquiry","count":115},{"month":"2026-01","team":"Product Support","service_line":"Data Management","overview":"Data Issue","count":15},{"month":"2026-01","team":"Product Support","service_line":"Data Management","overview":"Data Request","count":47},{"month":"2026-02","team":"DMG","service_line":"Data Exchange","overview":"Data Enquiry","count":6},{"month":"2026-02","team":"DMG","service_line":"Data Exchange","overview":"Data Issue","count":34},{"month":"2026-02","team":"DMG","service_line":"Data Exchange","overview":"Data Request","count":454},{"month":"2026-02","team":"DMG","service_line":"Data Insights","overview":"Data Enquiry","count":2},{"month":"2026-02","team":"DMG","service_line":"Data Insights","overview":"Data Issue","count":42},{"month":"2026-02","team":"DMG","service_line":"Data Insights","overview":"Data Request","count":43},{"month":"2026-02","team":"DMG","service_line":"Data Management","overview":"Data Enquiry","count":164},{"month":"2026-02","team":"DMG","service_line":"Data Management","overview":"Data Issue","count":105},{"month":"2026-02","team":"DMG","service_line":"Data Management","overview":"Data Request","count":1400},{"month":"2026-02","team":"Data Onboarding","service_line":"Data Exchange","overview":"Data Issue","count":1},{"month":"2026-02","team":"Data Onboarding","service_line":"Data Exchange","overview":"Data Request","count":154},{"month":"2026-02","team":"Data Onboarding","service_line":"Data Insights","overview":"Data Request","count":4},{"month":"2026-02","team":"Data Onboarding","service_line":"Data Management","overview":"Data Request","count":6},{"month":"2026-02","team":"Data Support","service_line":"Data Exchange","overview":"Data Enquiry","count":268},{"month":"2026-02","team":"Data Support","service_line":"Data Exchange","overview":"Data Issue","count":19},{"month":"2026-02","team":"Data Support","service_line":"Data Exchange","overview":"Data Request","count":640},{"month":"2026-02","team":"Data Support","service_line":"Data Insights","overview":"Data Enquiry","count":1},{"month":"2026-02","team":"Data Support","service_line":"Data Insights","overview":"Data Issue","count":12},{"month":"2026-02","team":"Data Support","service_line":"Data Insights","overview":"Data Request","count":17},{"month":"2026-02","team":"Data Support","service_line":"Data Management","overview":"Data Enquiry","count":18},{"month":"2026-02","team":"Data Support","service_line":"Data Management","overview":"Data Issue","count":32},{"month":"2026-02","team":"Data Support","service_line":"Data Management","overview":"Data Request","count":210},{"month":"2026-02","team":"Other","service_line":"Data Exchange","overview":"Data Enquiry","count":95},{"month":"2026-02","team":"Other","service_line":"Data Exchange","overview":"Data Issue","count":32},{"month":"2026-02","team":"Other","service_line":"Data Exchange","overview":"Data Request","count":292},{"month":"2026-02","team":"Other","service_line":"Data Insights","overview":"Data Issue","count":18},{"month":"2026-02","team":"Other","service_line":"Data Insights","overview":"Data Request","count":22},{"month":"2026-02","team":"Other","service_line":"Data Management","overview":"Data Enquiry","count":55},{"month":"2026-02","team":"Other","service_line":"Data Management","overview":"Data Issue","count":27},{"month":"2026-02","team":"Other","service_line":"Data Management","overview":"Data Request","count":117},{"month":"2026-02","team":"PF Data","service_line":"Data Exchange","overview":"Data Enquiry","count":1},{"month":"2026-02","team":"PF Data","service_line":"Data Exchange","overview":"Data Issue","count":1},{"month":"2026-02","team":"PF Data","service_line":"Data Exchange","overview":"Data Request","count":6},{"month":"2026-02","team":"PF Data","service_line":"Data Insights","overview":"Data Request","count":2},{"month":"2026-02","team":"PF Data","service_line":"Data Management","overview":"Data Enquiry","count":41},{"month":"2026-02","team":"PF Data","service_line":"Data Management","overview":"Data Issue","count":2},{"month":"2026-02","team":"PF Data","service_line":"Data Management","overview":"Data Request","count":340},{"month":"2026-02","team":"PF Support","service_line":"Data Management","overview":"Data Enquiry","count":296},{"month":"2026-02","team":"PF Support","service_line":"Data Management","overview":"Data Issue","count":1},{"month":"2026-02","team":"PF Support","service_line":"Data Management","overview":"Data Request","count":12},{"month":"2026-02","team":"Product Support","service_line":"Data Exchange","overview":"Data Enquiry","count":7},{"month":"2026-02","team":"Product Support","service_line":"Data Exchange","overview":"Data Request","count":3},{"month":"2026-02","team":"Product Support","service_line":"Data Insights","overview":"Data Enquiry","count":14},{"month":"2026-02","team":"Product Support","service_line":"Data Insights","overview":"Data Issue","count":11},{"month":"2026-02","team":"Product Support","service_line":"Data Insights","overview":"Data Request","count":10},{"month":"2026-02","team":"Product Support","service_line":"Data Management","overview":"Data Enquiry","count":207},{"month":"2026-02","team":"Product Support","service_line":"Data Management","overview":"Data Issue","count":6},{"month":"2026-02","team":"Product Support","service_line":"Data Management","overview":"Data Request","count":41},{"month":"2026-03","team":"DMG","service_line":"Data Exchange","overview":"Data Enquiry","count":11},{"month":"2026-03","team":"DMG","service_line":"Data Exchange","overview":"Data Issue","count":44},{"month":"2026-03","team":"DMG","service_line":"Data Exchange","overview":"Data Request","count":491},{"month":"2026-03","team":"DMG","service_line":"Data Insights","overview":"Data Enquiry","count":2},{"month":"2026-03","team":"DMG","service_line":"Data Insights","overview":"Data Issue","count":48},{"month":"2026-03","team":"DMG","service_line":"Data Insights","overview":"Data Request","count":47},{"month":"2026-03","team":"DMG","service_line":"Data Management","overview":"Data Enquiry","count":180},{"month":"2026-03","team":"DMG","service_line":"Data Management","overview":"Data Issue","count":107},{"month":"2026-03","team":"DMG","service_line":"Data Management","overview":"Data Request","count":1608},{"month":"2026-03","team":"Data Onboarding","service_line":"Data Exchange","overview":"Data Issue","count":2},{"month":"2026-03","team":"Data Onboarding","service_line":"Data Exchange","overview":"Data Request","count":175},{"month":"2026-03","team":"Data Onboarding","service_line":"Data Insights","overview":"Data Request","count":2},{"month":"2026-03","team":"Data Onboarding","service_line":"Data Management","overview":"Data Request","count":3},{"month":"2026-03","team":"Data Support","service_line":"Data Exchange","overview":"Data Enquiry","count":294},{"month":"2026-03","team":"Data Support","service_line":"Data Exchange","overview":"Data Issue","count":8},{"month":"2026-03","team":"Data Support","service_line":"Data Exchange","overview":"Data Request","count":498},{"month":"2026-03","team":"Data Support","service_line":"Data Insights","overview":"Data Enquiry","count":4},{"month":"2026-03","team":"Data Support","service_line":"Data Insights","overview":"Data Issue","count":6},{"month":"2026-03","team":"Data Support","service_line":"Data Insights","overview":"Data Request","count":24},{"month":"2026-03","team":"Data Support","service_line":"Data Management","overview":"Data Enquiry","count":13},{"month":"2026-03","team":"Data Support","service_line":"Data Management","overview":"Data Issue","count":38},{"month":"2026-03","team":"Data Support","service_line":"Data Management","overview":"Data Request","count":187},{"month":"2026-03","team":"Other","service_line":"Data Exchange","overview":"Data Enquiry","count":118},{"month":"2026-03","team":"Other","service_line":"Data Exchange","overview":"Data Issue","count":23},{"month":"2026-03","team":"Other","service_line":"Data Exchange","overview":"Data Request","count":290},{"month":"2026-03","team":"Other","service_line":"Data Insights","overview":"Data Enquiry","count":3},{"month":"2026-03","team":"Other","service_line":"Data Insights","overview":"Data Issue","count":9},{"month":"2026-03","team":"Other","service_line":"Data Insights","overview":"Data Request","count":16},{"month":"2026-03","team":"Other","service_line":"Data Management","overview":"Data Enquiry","count":30},{"month":"2026-03","team":"Other","service_line":"Data Management","overview":"Data Issue","count":11},{"month":"2026-03","team":"Other","service_line":"Data Management","overview":"Data Request","count":111},{"month":"2026-03","team":"PF Data","service_line":"Data Exchange","overview":"Data Request","count":15},{"month":"2026-03","team":"PF Data","service_line":"Data Management","overview":"Data Enquiry","count":34},{"month":"2026-03","team":"PF Data","service_line":"Data Management","overview":"Data Issue","count":7},{"month":"2026-03","team":"PF Data","service_line":"Data Management","overview":"Data Request","count":370},{"month":"2026-03","team":"PF Support","service_line":"Data Management","overview":"Data Enquiry","count":142},{"month":"2026-03","team":"PF Support","service_line":"Data Management","overview":"Data Issue","count":2},{"month":"2026-03","team":"PF Support","service_line":"Data Management","overview":"Data Request","count":7},{"month":"2026-03","team":"Product Support","service_line":"Data Exchange","overview":"Data Request","count":1},{"month":"2026-03","team":"Product Support","service_line":"Data Insights","overview":"Data Enquiry","count":13},{"month":"2026-03","team":"Product Support","service_line":"Data Insights","overview":"Data Issue","count":5},{"month":"2026-03","team":"Product Support","service_line":"Data Insights","overview":"Data Request","count":9},{"month":"2026-03","team":"Product Support","service_line":"Data Management","overview":"Data Enquiry","count":495},{"month":"2026-03","team":"Product Support","service_line":"Data Management","overview":"Data Issue","count":6},{"month":"2026-03","team":"Product Support","service_line":"Data Management","overview":"Data Request","count":103},{"month":"2026-04","team":"DMG","service_line":"Data Exchange","overview":"Data Enquiry","count":6},{"month":"2026-04","team":"DMG","service_line":"Data Exchange","overview":"Data Issue","count":49},{"month":"2026-04","team":"DMG","service_line":"Data Exchange","overview":"Data Request","count":429},{"month":"2026-04","team":"DMG","service_line":"Data Insights","overview":"Data Enquiry","count":4},{"month":"2026-04","team":"DMG","service_line":"Data Insights","overview":"Data Issue","count":39},{"month":"2026-04","team":"DMG","service_line":"Data Insights","overview":"Data Request","count":37},{"month":"2026-04","team":"DMG","service_line":"Data Management","overview":"Data Enquiry","count":168},{"month":"2026-04","team":"DMG","service_line":"Data Management","overview":"Data Issue","count":91},{"month":"2026-04","team":"DMG","service_line":"Data Management","overview":"Data Request","count":1459},{"month":"2026-04","team":"Data Onboarding","service_line":"Data Exchange","overview":"Data Enquiry","count":1},{"month":"2026-04","team":"Data Onboarding","service_line":"Data Exchange","overview":"Data Issue","count":2},{"month":"2026-04","team":"Data Onboarding","service_line":"Data Exchange","overview":"Data Request","count":210},{"month":"2026-04","team":"Data Onboarding","service_line":"Data Insights","overview":"Data Request","count":4},{"month":"2026-04","team":"Data Onboarding","service_line":"Data Management","overview":"Data Request","count":9},{"month":"2026-04","team":"Data Support","service_line":"Data Exchange","overview":"Data Enquiry","count":325},{"month":"2026-04","team":"Data Support","service_line":"Data Exchange","overview":"Data Issue","count":15},{"month":"2026-04","team":"Data Support","service_line":"Data Exchange","overview":"Data Request","count":540},{"month":"2026-04","team":"Data Support","service_line":"Data Insights","overview":"Data Enquiry","count":2},{"month":"2026-04","team":"Data Support","service_line":"Data Insights","overview":"Data Issue","count":8},{"month":"2026-04","team":"Data Support","service_line":"Data Insights","overview":"Data Request","count":22},{"month":"2026-04","team":"Data Support","service_line":"Data Management","overview":"Data Enquiry","count":18},{"month":"2026-04","team":"Data Support","service_line":"Data Management","overview":"Data Issue","count":34},{"month":"2026-04","team":"Data Support","service_line":"Data Management","overview":"Data Request","count":213},{"month":"2026-04","team":"Other","service_line":"Data Exchange","overview":"Data Enquiry","count":84},{"month":"2026-04","team":"Other","service_line":"Data Exchange","overview":"Data Issue","count":30},{"month":"2026-04","team":"Other","service_line":"Data Exchange","overview":"Data Request","count":194},{"month":"2026-04","team":"Other","service_line":"Data Insights","overview":"Data Enquiry","count":9},{"month":"2026-04","team":"Other","service_line":"Data Insights","overview":"Data Issue","count":2},{"month":"2026-04","team":"Other","service_line":"Data Insights","overview":"Data Request","count":16},{"month":"2026-04","team":"Other","service_line":"Data Management","overview":"Data Enquiry","count":10},{"month":"2026-04","team":"Other","service_line":"Data Management","overview":"Data Issue","count":5},{"month":"2026-04","team":"Other","service_line":"Data Management","overview":"Data Request","count":106},{"month":"2026-04","team":"PF Data","service_line":"Data Exchange","overview":"Data Issue","count":1},{"month":"2026-04","team":"PF Data","service_line":"Data Exchange","overview":"Data Request","count":12},{"month":"2026-04","team":"PF Data","service_line":"Data Management","overview":"Data Enquiry","count":44},{"month":"2026-04","team":"PF Data","service_line":"Data Management","overview":"Data Issue","count":4},{"month":"2026-04","team":"PF Data","service_line":"Data Management","overview":"Data Request","count":309},{"month":"2026-04","team":"PF Support","service_line":"Data Exchange","overview":"Data Enquiry","count":1},{"month":"2026-04","team":"PF Support","service_line":"Data Exchange","overview":"Data Request","count":1},{"month":"2026-04","team":"PF Support","service_line":"Data Management","overview":"Data Enquiry","count":394},{"month":"2026-04","team":"PF Support","service_line":"Data Management","overview":"Data Issue","count":2},{"month":"2026-04","team":"PF Support","service_line":"Data Management","overview":"Data Request","count":13},{"month":"2026-04","team":"Product Support","service_line":"Data Exchange","overview":"Data Issue","count":1},{"month":"2026-04","team":"Product Support","service_line":"Data Exchange","overview":"Data Request","count":2},{"month":"2026-04","team":"Product Support","service_line":"Data Insights","overview":"Data Enquiry","count":4},{"month":"2026-04","team":"Product Support","service_line":"Data Insights","overview":"Data Issue","count":2},{"month":"2026-04","team":"Product Support","service_line":"Data Insights","overview":"Data Request","count":13},{"month":"2026-04","team":"Product Support","service_line":"Data Management","overview":"Data Enquiry","count":239},{"month":"2026-04","team":"Product Support","service_line":"Data Management","overview":"Data Issue","count":7},{"month":"2026-04","team":"Product Support","service_line":"Data Management","overview":"Data Request","count":128},{"month":"2026-05","team":"DMG","service_line":"Data Exchange","overview":"Data Enquiry","count":4},{"month":"2026-05","team":"DMG","service_line":"Data Exchange","overview":"Data Issue","count":17},{"month":"2026-05","team":"DMG","service_line":"Data Exchange","overview":"Data Request","count":285},{"month":"2026-05","team":"DMG","service_line":"Data Insights","overview":"Data Enquiry","count":5},{"month":"2026-05","team":"DMG","service_line":"Data Insights","overview":"Data Issue","count":34},{"month":"2026-05","team":"DMG","service_line":"Data Insights","overview":"Data Request","count":22},{"month":"2026-05","team":"DMG","service_line":"Data Management","overview":"Data Enquiry","count":55},{"month":"2026-05","team":"DMG","service_line":"Data Management","overview":"Data Issue","count":44},{"month":"2026-05","team":"DMG","service_line":"Data Management","overview":"Data Request","count":901},{"month":"2026-05","team":"Data Onboarding","service_line":"Data Exchange","overview":"Data Request","count":144},{"month":"2026-05","team":"Data Onboarding","service_line":"Data Insights","overview":"Data Request","count":2},{"month":"2026-05","team":"Data Onboarding","service_line":"Data Management","overview":"Data Request","count":4},{"month":"2026-05","team":"Data Support","service_line":"Data Exchange","overview":"Data Enquiry","count":272},{"month":"2026-05","team":"Data Support","service_line":"Data Exchange","overview":"Data Issue","count":7},{"month":"2026-05","team":"Data Support","service_line":"Data Exchange","overview":"Data Request","count":382},{"month":"2026-05","team":"Data Support","service_line":"Data Insights","overview":"Data Issue","count":5},{"month":"2026-05","team":"Data Support","service_line":"Data Insights","overview":"Data Request","count":21},{"month":"2026-05","team":"Data Support","service_line":"Data Management","overview":"Data Enquiry","count":8},{"month":"2026-05","team":"Data Support","service_line":"Data Management","overview":"Data Issue","count":20},{"month":"2026-05","team":"Data Support","service_line":"Data Management","overview":"Data Request","count":123},{"month":"2026-05","team":"Other","service_line":"Data Exchange","overview":"Data Enquiry","count":29},{"month":"2026-05","team":"Other","service_line":"Data Exchange","overview":"Data Issue","count":8},{"month":"2026-05","team":"Other","service_line":"Data Exchange","overview":"Data Request","count":136},{"month":"2026-05","team":"Other","service_line":"Data Insights","overview":"Data Enquiry","count":3},{"month":"2026-05","team":"Other","service_line":"Data Insights","overview":"Data Issue","count":2},{"month":"2026-05","team":"Other","service_line":"Data Insights","overview":"Data Request","count":19},{"month":"2026-05","team":"Other","service_line":"Data Management","overview":"Data Enquiry","count":5},{"month":"2026-05","team":"Other","service_line":"Data Management","overview":"Data Issue","count":3},{"month":"2026-05","team":"Other","service_line":"Data Management","overview":"Data Request","count":65},{"month":"2026-05","team":"PF Data","service_line":"Data Exchange","overview":"Data Request","count":6},{"month":"2026-05","team":"PF Data","service_line":"Data Insights","overview":"Data Enquiry","count":1},{"month":"2026-05","team":"PF Data","service_line":"Data Management","overview":"Data Enquiry","count":32},{"month":"2026-05","team":"PF Data","service_line":"Data Management","overview":"Data Issue","count":2},{"month":"2026-05","team":"PF Data","service_line":"Data Management","overview":"Data Request","count":179},{"month":"2026-05","team":"PF Support","service_line":"Data Management","overview":"Data Enquiry","count":371},{"month":"2026-05","team":"PF Support","service_line":"Data Management","overview":"Data Issue","count":1},{"month":"2026-05","team":"PF Support","service_line":"Data Management","overview":"Data Request","count":10},{"month":"2026-05","team":"Product Support","service_line":"Data Insights","overview":"Data Enquiry","count":2},{"month":"2026-05","team":"Product Support","service_line":"Data Insights","overview":"Data Issue","count":2},{"month":"2026-05","team":"Product Support","service_line":"Data Insights","overview":"Data Request","count":8},{"month":"2026-05","team":"Product Support","service_line":"Data Management","overview":"Data Enquiry","count":7},{"month":"2026-05","team":"Product Support","service_line":"Data Management","overview":"Data Issue","count":5},{"month":"2026-05","team":"Product Support","service_line":"Data Management","overview":"Data Request","count":67}];
+
+const MONTHS=['2026-01','2026-02','2026-03','2026-04','2026-05'];
+const MONTH_LABELS=['Jan 2026','Feb 2026','Mar 2026','Apr 2026','May 2026'];
+const TEAMS=['DMG','Data Onboarding','Data Support','Other','PF Data','PF Support','Product Support'];
+const SL=['Data Exchange','Data Insights','Data Management'];
+const OV=['Data Enquiry','Data Issue','Data Request'];
+const TEAM_COLORS=['#378ADD','#1D9E75','#D85A30','#888780','#7F77DD','#D4537E','#639922'];
+
+let mode='service_line', activeFilter='All';
+
+function getFiltered(){
+  if(activeFilter==='All') return RAW;
+  const key=mode==='service_line'?'service_line':'overview';
+  return RAW.filter(r=>r[key]===activeFilter);
+}
+
+function buildPivot(){
+  const data=getFiltered();
+  const map={};
+  MONTHS.forEach(m=>{map[m]={};TEAMS.forEach(t=>{map[m][t]=0;});});
+  data.forEach(r=>{if(map[r.month]&&map[r.month][r.team]!==undefined)map[r.month][r.team]+=r.count;});
+  return map;
+}
+
+function renderPills(){
+  const opts=['All',...(mode==='service_line'?SL:OV)];
+  const container=document.getElementById('filter-pills');
+  container.innerHTML='';
+  opts.forEach(o=>{
+    const b=document.createElement('button');
+    b.className='pill'+(o===activeFilter?' active':'');
+    b.textContent=o;
+    b.onclick=()=>{activeFilter=o;renderAll();};
+    container.appendChild(b);
+  });
+  document.getElementById('filter-label').textContent=mode==='service_line'?'Service line':'Case overview';
+  document.getElementById('filter-badge').textContent=activeFilter;
+}
+
+function renderMetrics(pivot){
+  const totalAll=RAW.reduce((s,r)=>s+r.count,0);
+  const filtered=getFiltered();
+  const totalFiltered=filtered.reduce((s,r)=>s+r.count,0);
+  const byTeam={};TEAMS.forEach(t=>byTeam[t]=0);
+  filtered.forEach(r=>{if(byTeam[r.team]!==undefined)byTeam[r.team]+=r.count;});
+  const topTeam=Object.entries(byTeam).sort((a,b)=>b[1]-a[1])[0];
+  const pct=Math.round(topTeam[1]/totalFiltered*100);
+  document.getElementById('metrics').innerHTML=`
+    <div class="mc"><div class="mc-label">Total cases</div><div class="mc-val">${totalAll.toLocaleString()}</div></div>
+    <div class="mc"><div class="mc-label">Filtered view</div><div class="mc-val">${totalFiltered.toLocaleString()}</div></div>
+    <div class="mc"><div class="mc-label">Top resolver team</div><div class="mc-val small">${topTeam[0]}</div></div>
+    <div class="mc"><div class="mc-label">Top team share</div><div class="mc-val">${pct}%</div></div>
+  `;
+}
+
+function renderTable(pivot){
+  const thead=document.getElementById('thead');
+  const tbody=document.getElementById('tbody');
+  let hdr='<tr><th>Month</th>';
+  TEAMS.forEach((t,i)=>hdr+=`<th><span class="team-dot" style="background:${TEAM_COLORS[i]}"></span>${t}</th>`);
+  hdr+='<th>Total</th></tr>';
+  thead.innerHTML=hdr;
+
+  let rows='';
+  const colTotals={};TEAMS.forEach(t=>colTotals[t]=0);
+  let grandTotal=0;
+
+  MONTHS.forEach((m,i)=>{
+    const rowTotal=TEAMS.reduce((s,t)=>s+pivot[m][t],0);
+    grandTotal+=rowTotal;
+    rows+=`<tr><td>${MONTH_LABELS[i]}</td>`;
+    TEAMS.forEach(t=>{
+      const v=pivot[m][t];
+      colTotals[t]+=v;
+      rows+=v===0?`<td class="zero">—</td>`:`<td>${v.toLocaleString()}</td>`;
+    });
+    rows+=`<td><strong>${rowTotal.toLocaleString()}</strong></td></tr>`;
+  });
+
+  rows+='<tr class="total-row"><td>Grand total</td>';
+  TEAMS.forEach(t=>rows+=`<td>${colTotals[t].toLocaleString()}</td>`);
+  rows+=`<td>${grandTotal.toLocaleString()}</td></tr>`;
+  tbody.innerHTML=rows;
+}
+
+let chartInst=null;
+function renderChart(pivot){
+  const legend=document.getElementById('chart-legend');
+  legend.innerHTML=TEAMS.map((t,i)=>`<span class="legend-item"><span class="legend-swatch" style="background:${TEAM_COLORS[i]}"></span>${t}</span>`).join('');
+
+  const datasets=TEAMS.map((t,i)=>({
+    label:t,
+    data:MONTHS.map(m=>pivot[m][t]),
+    backgroundColor:TEAM_COLORS[i],
+    borderWidth:0
+  }));
+
+  if(chartInst){chartInst.destroy();}
+  chartInst=new Chart(document.getElementById('barChart'),{
+    type:'bar',
+    data:{labels:MONTH_LABELS,datasets},
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false}},
+      scales:{
+        x:{stacked:true,ticks:{autoSkip:false},grid:{display:false}},
+        y:{stacked:true,ticks:{callback:v=>v>=1000?Math.round(v/1000)+'k':v},grid:{color:'#e4e4e0'}}
+      }
+    }
+  });
+}
+
+function setMode(m){
+  mode=m;activeFilter='All';
+  document.getElementById('mode-sl').className='mode-btn'+(m==='service_line'?' active':'');
+  document.getElementById('mode-ov').className='mode-btn'+(m==='overview'?' active':'');
+  renderAll();
+}
+
+function renderAll(){
+  renderPills();
+  const pivot=buildPivot();
+  renderMetrics(pivot);
+  renderTable(pivot);
+  renderChart(pivot);
+}
+
+renderAll();
+</script>
+</body>
+</html>
